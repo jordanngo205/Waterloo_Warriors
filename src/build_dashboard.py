@@ -1834,7 +1834,8 @@ function renderScatterPlot(){
     svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="#9ca3af" fill-opacity="0.3" stroke="#9ca3af" stroke-width="1" style="cursor:pointer" onclick="goTeam(\''+t.id+'\')"><title>'+esc(t.name)+' ['+t.conf+']\nOff PPP: '+f3(ppp(t.off))+'\nDef PPP: '+f3(ppp(t.def))+'</title></circle>';
   });
   // main dots
-  validT.forEach(function(t){
+  var _lbl=[];
+  validT.slice().sort(function(a,b){return (b.id===HOME_ID)-(a.id===HOME_ID);}).forEach(function(t){
     var x=xS(ppp(t.off)), y=yS(ppp(t.def)), n=net(t);
     var col=n>=0.10?'#16a34a':n>=-0.05?'#eab308':n>=-0.15?'#f97316':'#dc2626';
     var r=7, op=0.9, sw=1.5;
@@ -1844,13 +1845,19 @@ function renderScatterPlot(){
     var nr=TR[t.id]?TR[t.id].net:99;
     if(CONF||t.id===HOME_ID||nr<=5||nr>=validT.length-3){
       var anchor=x>ax?'start':'end'; var lx=x>ax?x+9:x-9;
-      svg+='<text x="'+lx.toFixed(1)+'" y="'+(y+3).toFixed(1)+'" text-anchor="'+anchor+'" fill="#374151" font-size="9" font-weight="600" style="pointer-events:none">'+esc(t.name)+'</text>';
+      var w=t.name.length*5.2, ly=null;
+      [0,11,-11,22,-22].some(function(dy){
+        var yy=y+3+dy, x0=anchor==='start'?lx:lx-w, x1=x0+w;
+        var hit=_lbl.some(function(b){return x0<b[2]&&x1>b[0]&&Math.abs(yy-b[1])<10;});
+        if(!hit){ly=yy;_lbl.push([x0,yy,x1]);return true;} return false;
+      });
+      if(ly!==null||t.id===HOME_ID) svg+='<text x="'+lx.toFixed(1)+'" y="'+(ly!==null?ly:y+3).toFixed(1)+'" text-anchor="'+anchor+'" fill="#374151" font-size="9" font-weight="'+(t.id===HOME_ID?'800':'600')+'" style="pointer-events:none">'+esc(t.name)+'</text>';
     }
   });
   svg+='</g>';
   // axis labels
   svg+='<text x="'+(pL+iW/2)+'" y="'+(H-4)+'" text-anchor="middle" fill="#374151" font-size="11" font-weight="600">Offensive PPP &#8594;</text>';
-  svg+='<text transform="rotate(-90)" x="'+(-(pT+iH/2))+'" y="16" text-anchor="middle" fill="#374151" font-size="11" font-weight="600">Defensive PPP allowed &#8595; (lower = better, &#8593; = elite defense)</text>';
+  svg+='<text transform="rotate(-90)" x="'+(-(pT+iH/2))+'" y="16" text-anchor="middle" fill="#374151" font-size="11" font-weight="600">Defensive PPP allowed &#8595; (lower = better, &#8593; = better defense)</text>';
   svg+='</svg>';
   var legend='<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text2)">';
   [{c:'#16a34a',l:'Net &ge;+0.10'},{c:'#eab308',l:'Net &minus;0.05 to +0.10'},{c:'#f97316',l:'Net &minus;0.15 to &minus;0.05'},{c:'#dc2626',l:'Net &lt;&minus;0.15'}].forEach(function(it){

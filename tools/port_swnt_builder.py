@@ -491,6 +491,21 @@ rep(""">DEFENSIVE</text>';""", """>DEFENSE ABOVE AVG</text>';""")
 rep(""">OFFENSIVE</text>';""", """>OFFENSE ABOVE AVG</text>';""")
 rep(""">STRUGGLING</text>';""", """>BELOW AVG BOTH ENDS</text>';""")
 
+rep("(lower = better, &#8593; = elite defense)", "(lower = better, &#8593; = better defense)")
+# scatter labels: nudge or drop a label that would overprint another
+rep("""      var anchor=x>ax?'start':'end'; var lx=x>ax?x+9:x-9;
+      svg+='<text x="'+lx.toFixed(1)+'" y="'+(y+3).toFixed(1)+'" text-anchor="'+anchor+'" fill="#374151" font-size="9" font-weight="600" style="pointer-events:none">'+esc(t.name)+'</text>';""",
+"""      var anchor=x>ax?'start':'end'; var lx=x>ax?x+9:x-9;
+      var w=t.name.length*5.2, ly=null;
+      [0,11,-11,22,-22].some(function(dy){
+        var yy=y+3+dy, x0=anchor==='start'?lx:lx-w, x1=x0+w;
+        var hit=_lbl.some(function(b){return x0<b[2]&&x1>b[0]&&Math.abs(yy-b[1])<10;});
+        if(!hit){ly=yy;_lbl.push([x0,yy,x1]);return true;} return false;
+      });
+      if(ly!==null||t.id===HOME_ID) svg+='<text x="'+lx.toFixed(1)+'" y="'+(ly!==null?ly:y+3).toFixed(1)+'" text-anchor="'+anchor+'" fill="#374151" font-size="9" font-weight="'+(t.id===HOME_ID?'800':'600')+'" style="pointer-events:none">'+esc(t.name)+'</text>';""")
+rep("  validT.forEach(function(t){\n    var x=xS(ppp(t.off)), y=yS(ppp(t.def)), n=net(t);",
+    "  var _lbl=[];\n  validT.slice().sort(function(a,b){return (b.id===HOME_ID)-(a.id===HOME_ID);}).forEach(function(t){\n    var x=xS(ppp(t.off)), y=yS(ppp(t.def)), n=net(t);")
+
 # home team: defaults + highlight
 rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")
 rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'",
