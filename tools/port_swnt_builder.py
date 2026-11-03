@@ -89,6 +89,9 @@ for p in _load('players_all.json', []):
 PLAYERS.sort(key=lambda x:x['name'])
 SEASON_LABEL = META.get('season', SEASON)
 UPDATED = (META.get('scraped_at') or '')[:10]
+import base64
+_logo = ROOT / 'assets' / 'warriors_logo.svg'
+LOGO_SRC = ('data:image/svg+xml;base64,' + base64.b64encode(_logo.read_bytes()).decode()) if _logo.exists() else ''
 
 '''
 body = src[head_end:]
@@ -223,6 +226,52 @@ rep("    var r=tierR[t.tier]||6, op=tierOp[t.tier]||0.85;\n    var sw=t.tier===1
 rep("    // label T1 always; T2 only if extreme position\n", "    // label everyone inside one conference; league-wide, only the extremes\n")
 rep("if(t.tier===1||(t.tier===2&&(nr<=5||nr>=validT.length-3))){", "if(CONF||nr<=5||nr>=validT.length-3){")
 rep("font-weight=\"'+(t.tier===1?'700':'500')+'\"", "font-weight=\"600\"")
+
+# ---- Waterloo Warriors branding ---------------------------------------------
+# Logo colours: gold #FFD100, black #231F20. Gold fails contrast as text on
+# white, so it is used for fills (with black text on top); text accents use a
+# darker gold that clears 4.5:1 on white.
+GOLD, INK, GOLD_TXT = '#FFD100', '#231F20', '#8a6b00'
+rep("--canada:#d52b1e;--canada-dark:#a81e13;", f"--canada:{GOLD_TXT};--canada-dark:#6b5300;--gold:{GOLD};--ink:{INK};")
+rep(".topbar{background:#111;border-bottom:4px solid var(--canada);", ".topbar{background:#000;border-bottom:4px solid var(--gold);")
+rep(".logo-badge{font-size:11px;font-weight:700;background:var(--canada);color:#fff;", ".logo-badge{font-size:11px;font-weight:700;background:var(--gold);color:#000;")
+rep(".topstat-n{font-size:18px;font-weight:800;color:var(--canada);", ".topstat-n{font-size:18px;font-weight:800;color:var(--gold);")
+rep(".toggle-btn.active{background:var(--canada);color:#fff;font-weight:700}", ".toggle-btn.active{background:var(--gold);color:#000;font-weight:700}")
+rep(".subtab-btn.active{background:var(--canada);border-color:var(--canada);color:#fff;", ".subtab-btn.active{background:var(--gold);border-color:var(--gold);color:#000;")
+rep(".lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--canada)}", ".lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}")
+rep(".pt-chip.active{background:var(--canada);border-color:var(--canada);", ".pt-chip.active{background:var(--gold);border-color:var(--gold);")
+rep(".poss-cell{background:rgba(213,43,30,.1);", ".poss-cell{background:rgba(255,209,0,.18);")
+rep(".nav-btn.active{color:var(--canada);border-bottom-color:var(--canada);", ".nav-btn.active{color:var(--ink);border-bottom-color:var(--gold);")
+body = body.replace('#f9a8b8,#d52b1e', '#ffe680,#e0b400')      # bar gradients
+body = body.replace('#d52b1e', '#d4a900')                       # remaining red fills / lines
+rep("function countryColor(name){ return COUNTRY_COLORS[name]||'#d4a900'; }",
+    "function countryColor(name){ return 'var(--ink)'; }")
+rep(".matchup-bar-row{", ".home-row td{background:rgba(255,209,0,.16)}\n.matchup-bar-row{")
+
+# logo + titles
+rep('<div class="logo">\n', '<div class="logo">\n    <img src="{LOGO_SRC}" alt="Waterloo Warriors">\n')
+rep('<span class="logo-main">U SPORTS</span>', '<span class="logo-main">Waterloo Warriors</span>')
+rep("Women's Basketball Analytics{UPDATED}", "Women's Basketball &middot; U SPORTS Analytics{UPDATED}")
+rep("'<title>U SPORTS Women\\'s Basketball</title>\\n'", "'<title>Waterloo Warriors WBB Analytics</title>\\n'")
+rep(".replace('{SEASON}', SEASON_LABEL)", ".replace('{LOGO_SRC}', LOGO_SRC).replace('{SEASON}', SEASON_LABEL)")
+
+# home team: defaults + highlight
+rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")
+rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'",
+    "    html+='<tr'+(t.id===HOME_ID?' class=\"home-row\"':'')+'>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'")
+rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td style=\"font-weight:700\">'+esc(p.name)+'</td>'+",
+    "    html+='<tr'+(p.tid===HOME_ID?' class=\"home-row\"':'')+'>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td style=\"font-weight:700\">'+esc(p.name)+'</td>'+")
+rep("    var r=7, op=0.9, sw=1.5;", "    var r=7, op=0.9, sw=1.5;\n    if(t.id===HOME_ID) svg+='<circle cx=\"'+x.toFixed(1)+'\" cy=\"'+y.toFixed(1)+'\" r=\"13\" fill=\"#FFD100\" fill-opacity=\"0.35\" stroke=\"#231F20\" stroke-width=\"2.5\"/>';")
+rep("if(CONF||nr<=5||nr>=validT.length-3){", "if(CONF||t.id===HOME_ID||nr<=5||nr>=validT.length-3){")
+rep("  renderOverview(); renderTeamRank(); renderPlayerRank();\n}\ninit();",
+"""  renderOverview(); renderTeamRank(); renderPlayerRank();
+  if(HOME_ID){
+    document.getElementById('ti-team').value=HOME_ID; renderTeamIntel();
+    document.getElementById('mu-a').value=HOME_ID;
+    document.getElementById('pi-team').value=HOME_ID; populatePiPlayers();
+  }
+}
+init();""")
 
 # The play-type explorer lists teams; respect the conference filter there too.
 leftover = [m.start() for m in re.finditer(r'[a-z]\.tier\b|TierMax|TEAM_TIER|useQual|qoff|qpt_', body)]

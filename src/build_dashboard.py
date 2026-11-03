@@ -72,6 +72,9 @@ for p in _load('players_all.json', []):
 PLAYERS.sort(key=lambda x:x['name'])
 SEASON_LABEL = META.get('season', SEASON)
 UPDATED = (META.get('scraped_at') or '')[:10]
+import base64
+_logo = ROOT / 'assets' / 'warriors_logo.svg'
+LOGO_SRC = ('data:image/svg+xml;base64,' + base64.b64encode(_logo.read_bytes()).decode()) if _logo.exists() else ''
 
 teams_json=json.dumps(TEAMS,separators=(',',':'))
 players_json=json.dumps(PLAYERS,separators=(',',':'))
@@ -86,31 +89,31 @@ CSS = """
   --text:#111827;--text2:#6b7280;--text3:#9ca3af;
   --blue:#1a56db;--green:#16a34a;--red:#dc2626;
   --yellow:#b45309;--orange:#c2410c;--purple:#7c3aed;
-  --canada:#d52b1e;--canada-dark:#a81e13;
+  --canada:#8a6b00;--canada-dark:#6b5300;--gold:#FFD100;--ink:#231F20;
   --radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 html{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
 body{min-height:100vh}
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-.topbar{background:#111;border-bottom:4px solid var(--canada);padding:0 28px;
+.topbar{background:#000;border-bottom:4px solid var(--gold);padding:0 28px;
   display:flex;align-items:center;gap:20px;flex-shrink:0;height:100px}
 .logo{display:flex;align-items:center;gap:14px}
 .logo img{height:64px;width:auto}
 .logo-text{display:flex;flex-direction:column}
 .logo-main{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
 .logo-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:1px}
-.logo-badge{font-size:11px;font-weight:700;background:var(--canada);color:#fff;
+.logo-badge{font-size:11px;font-weight:700;background:var(--gold);color:#000;
   padding:3px 9px;border-radius:4px;margin-left:12px;letter-spacing:.3px;align-self:center}
 .topstats{display:flex;gap:24px;margin-left:auto}
 .topstat{text-align:center}
-.topstat-n{font-size:18px;font-weight:800;color:var(--canada);line-height:1}
+.topstat-n{font-size:18px;font-weight:800;color:var(--gold);line-height:1}
 .topstat-l{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
 .nav{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;flex-shrink:0}
 .nav-btn{padding:12px 20px;font-size:13px;font-weight:500;color:var(--text2);border:none;
   background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;
   transition:all .15s}
 .nav-btn:hover{color:var(--text)}
-.nav-btn.active{color:var(--canada);border-bottom-color:var(--canada);font-weight:600}
+.nav-btn.active{color:var(--ink);border-bottom-color:var(--gold);font-weight:600}
 .content{flex:1;overflow-y:auto;padding:20px}
 .tab{display:none}.tab.active{display:block}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
@@ -144,7 +147,7 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .toggle-group{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .toggle-btn{padding:6px 16px;font-size:12px;font-weight:500;border:none;
   background:var(--bg2);color:var(--text2);cursor:pointer;transition:all .15s}
-.toggle-btn.active{background:var(--canada);color:#fff;font-weight:700}
+.toggle-btn.active{background:var(--gold);color:#000;font-weight:700}
 .sel{background:var(--bg2);color:var(--text);border:1px solid var(--border);
   border-radius:var(--radius);padding:6px 10px;font-size:12px;cursor:pointer}
 .stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px}
@@ -163,13 +166,13 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .subtabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
 .subtab-btn{padding:5px 14px;font-size:12px;font-weight:500;color:var(--text2);
   border:1px solid var(--border);border-radius:20px;background:var(--bg2);cursor:pointer;transition:all .15s}
-.subtab-btn.active{background:var(--canada);border-color:var(--canada);color:#fff;font-weight:700}
+.subtab-btn.active{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700}
 .subtab{display:none}.subtab.active{display:block}
 .team-select-row{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
 .team-select-row select{flex:1;min-width:200px}
 .lcard{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
   padding:14px;position:relative;overflow:hidden}
-.lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--canada)}
+.lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
 .lcard-rank{position:absolute;top:10px;right:12px;font-size:20px;font-weight:800;
   color:rgba(255,255,255,.08);line-height:1}
 .lcard-rank.top3{color:rgba(210,153,34,.25)}
@@ -178,7 +181,7 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .lcard-stat{font-size:26px;font-weight:800;color:var(--canada);margin-top:8px;line-height:1}
 .lcard-sub{font-size:10px;color:var(--text3);margin-top:5px}
 .lcard-bar{height:3px;border-radius:2px;background:var(--border);margin-top:10px}
-.lcard-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#f9a8b8,#d52b1e)}
+.lcard-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#ffe680,#e0b400)}
 .leader-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .pt-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
 .pt-tbl th{background:var(--bg3);color:var(--text2);font-weight:600;padding:7px 8px;
@@ -186,7 +189,7 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .pt-tbl th:first-child{text-align:left}
 .pt-tbl td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)}
 .pt-tbl td:first-child{text-align:left;color:var(--text2)}
-.poss-cell{background:rgba(213,43,30,.1);color:var(--canada);font-weight:700;border-radius:3px;padding:2px 6px}
+.poss-cell{background:rgba(255,209,0,.18);color:var(--canada);font-weight:700;border-radius:3px;padding:2px 6px}
 /* Percentile rows */
 .pct-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(48,54,61,.5)}
 .pct-row:last-child{border-bottom:none}
@@ -283,7 +286,7 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .pt-chip{display:inline-block;padding:4px 12px;font-size:12px;font-weight:600;
   border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);
   color:var(--text2);transition:all .15s;white-space:nowrap}
-.pt-chip.active{background:var(--canada);border-color:var(--canada);color:#000;font-weight:700}
+.pt-chip.active{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700}
 .pt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .pulse-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
 .pulse-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center}
@@ -293,6 +296,7 @@ tbody td:first-child,tbody td:nth-child(2){text-align:left}
 .section-hdr{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;
   letter-spacing:.8px;margin-bottom:10px;margin-top:4px;display:flex;align-items:center;gap:8px}
 .section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.home-row td{background:rgba(255,209,0,.16)}
 .matchup-bar-row{display:grid;grid-template-columns:90px 1fr 90px 1fr 90px;align-items:center;gap:0;margin-bottom:4px}
 """
 
@@ -300,9 +304,10 @@ HTML_BODY = """
 <div class="app">
 <div class="topbar">
   <div class="logo">
+    <img src="{LOGO_SRC}" alt="Waterloo Warriors">
     <div class="logo-text">
-      <span class="logo-main">U SPORTS</span>
-      <span class="logo-sub">Women's Basketball Analytics{UPDATED}</span>
+      <span class="logo-main">Waterloo Warriors</span>
+      <span class="logo-sub">Women's Basketball &middot; U SPORTS Analytics{UPDATED}</span>
     </div>
     <span class="logo-badge">{SEASON}</span>
   </div>
@@ -584,7 +589,7 @@ function pppRatingColor(v){ v=v/PPP_SCALE;
 
 // ── Country theme colours ─────────────────────────────────────────────────────
 var COUNTRY_COLORS = {
-  'Canada':'#d52b1e','USA':'#002868','United States':'#002868',
+  'Canada':'#d4a900','USA':'#002868','United States':'#002868',
   'France':'#002395','Spain':'#c60b1e','Australia':'#00843d',
   'China':'#de2910','Belgium':'#000000','Argentina':'#74acdf',
   'Brazil':'#009c3b','Germany':'#000000','Japan':'#bc002d',
@@ -592,7 +597,7 @@ var COUNTRY_COLORS = {
   'Greece':'#0d5eaf','Nigeria':'#008751','Serbia':'#c6363c',
   'Hungary':'#436f4d','Czech Republic':'#d7141a','Sweden':'#006aa7',
   'Poland':'#dc143c','Romania':'#002b7f','Croatia':'#171796',
-  'Turkey':'#e30a17','Israel':'#0038b8','Russia':'#d52b1e',
+  'Turkey':'#e30a17','Israel':'#0038b8','Russia':'#d4a900',
   'Netherlands':'#ff6600','Portugal':'#006600','Latvia':'#9e3039',
   'Lithuania':'#fdba12','Ukraine':'#005bbb','Belarus':'#cf101a',
   'Bulgaria':'#00966e','Switzerland':'#ff0000','Austria':'#ed2939',
@@ -610,9 +615,9 @@ var COUNTRY_COLORS = {
   'Tahiti':'#009a44','Cook Islands':'#003087','New Zealand':'#00247d',
   'Puerto Rico':'#ed0c27','Cuba':'#002a8f','Mexico':'#006847',
   'Colombia':'#fcd116','Venezuela':'#cf142b','Peru':'#d91023',
-  'Chile':'#d52b1e','Ecuador':'#ffd100','Uruguay':'#5EB6E4',
+  'Chile':'#d4a900','Ecuador':'#ffd100','Uruguay':'#5EB6E4',
 };
-function countryColor(name){ return COUNTRY_COLORS[name]||'#d52b1e'; }
+function countryColor(name){ return 'var(--ink)'; }
 
 // ── Global rank tables ────────────────────────────────────────────────────────
 var TR = {}, PR = {};  // TR[team_id][key]=rank, PR[player_id][key]=rank
@@ -712,7 +717,7 @@ function tierBadge(pct) {
 function radarSvg(vals, labels, color) {
   // vals: array of 0-100 percentile values
   var n=vals.length, sz=220, cx=sz/2, cy=sz/2, r=75;
-  color = color||'linear-gradient(90deg,#f9a8b8,#d52b1e)';
+  color = color||'linear-gradient(90deg,#ffe680,#e0b400)';
   var svg='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'" style="overflow:visible">';
   // grid rings
   [0.25,0.5,0.75,1.0].forEach(function(ring){
@@ -887,7 +892,7 @@ function renderOverview(){
   var offHtml='';
   for(var i=0;i<top10.length;i++){
     var t=top10[i]; var v=ppp(t.off); var rank=TR[t.id]['off_ppp'];
-    offHtml+=hbar(t.name, v/maxOff*100, f3(v), 'linear-gradient(90deg,#f9a8b8,#d52b1e)', ' <span style="font-size:9px;color:var(--text3)">#'+rank+'</span>');
+    offHtml+=hbar(t.name, v/maxOff*100, f3(v), 'linear-gradient(90deg,#ffe680,#e0b400)', ' <span style="font-size:9px;color:var(--text3)">#'+rank+'</span>');
   }
   document.getElementById('ov-top-off').innerHTML=offHtml;
 
@@ -925,7 +930,7 @@ function renderOverview(){
   var pppHtml='';
   for(var j=0;j<ptPPPSorted.length;j++){
     var x=ptPPPSorted[j];
-    var col=x.ppp>leaguePPP?'#d52b1e':'#8b949e';
+    var col=x.ppp>leaguePPP?'#d4a900':'#8b949e';
     pppHtml+=hbar(x.pt, x.ppp/maxPTPPP*100, f3(x.ppp), col);
   }
   document.getElementById('ov-pt-ppp').innerHTML=pppHtml;
@@ -1030,7 +1035,7 @@ function renderTeamRank(){
     var defRank=TR[t.id]&&TR[t.id]['def_ppp'];
     var tierPct=isD?(offRank?rPct(defRank,N):50):(offRank?rPct(offRank,N):50);
     var tc=tierCol(tierPct); var tt=tierStr(tierPct); var ttc=tierTxtCol(tierPct);
-    html+='<tr>'+
+    html+='<tr'+(t.id===HOME_ID?' class="home-row"':'')+'>'+
       '<td class="rank-cell">'+(i+1)+'</td>'+
       '<td><span style="font-weight:700">'+esc(t.name)+'</span> '+
         confChip(t.conf)+' '+
@@ -1091,7 +1096,7 @@ function renderPlayerRank(){
     var p=rows[i]; var d=ptF?(p.pt_off[ptF]||{}):p.off;
     var pv=ppp(d); var ev=efg(d);
     var pRank=PR[p.id]&&PR[p.id].ppp;
-    html+='<tr>'+
+    html+='<tr'+(p.tid===HOME_ID?' class="home-row"':'')+'>'+
       '<td class="rank-cell">'+(i+1)+'</td>'+
       '<td style="font-weight:700">'+esc(p.name)+'</td>'+
       '<td style="color:var(--text2);font-size:11px">'+esc(p.team)+'</td>'+
@@ -1447,12 +1452,12 @@ function renderPlayerIntel(){
   var shotProfile='<div style="margin-bottom:12px">'+
     '<div style="font-size:10px;color:var(--text2);margin-bottom:6px;font-weight:600">SHOT SELECTION</div>'+
     '<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:4px">'+
-      '<div style="width:'+shots2Pct.toFixed(1)+'%;background:#d52b1e"></div>'+
+      '<div style="width:'+shots2Pct.toFixed(1)+'%;background:#d4a900"></div>'+
       '<div style="width:'+shots3Pct.toFixed(1)+'%;background:#bc8cff"></div>'+
       '<div style="flex:1;background:var(--bg3)"></div>'+
     '</div>'+
     '<div style="display:flex;gap:16px;font-size:10px;color:var(--text2)">'+
-      '<span><span style="color:#d52b1e">&#9632;</span> 2PT: '+fP(shots2Pct)+' ('+o.a2+' att, '+fP(fg2(o))+')</span>'+
+      '<span><span style="color:#d4a900">&#9632;</span> 2PT: '+fP(shots2Pct)+' ('+o.a2+' att, '+fP(fg2(o))+')</span>'+
       '<span><span style="color:#bc8cff">&#9632;</span> 3PT: '+fP(shots3Pct)+' ('+o.a3+' att, '+fP(fg3(o))+')</span>'+
     '</div></div>';
 
@@ -1541,7 +1546,7 @@ function renderPlayerIntel(){
     var pv4=ppp(s);
     ptBars+=hbar(pt, s.p/maxPT*100,
       s.p+' ('+fP(s.p/totalP*100)+')  '+f3(pv4)+' PPP',
-      pv4>=1.0?'#3fb950':pv4>=0.85?'#d52b1e':pv4>=0.70?'#d29922':'#f85149');
+      pv4>=1.0?'#3fb950':pv4>=0.85?'#d4a900':pv4>=0.70?'#d29922':'#f85149');
   }
 
   // Defense overall + play type breakdown
@@ -1689,6 +1694,8 @@ var CONF='';
 var CONFS=['CW','OUA','RSEQ','AUS'];
 var CONF_NAMES={CW:'Canada West',OUA:'OUA',RSEQ:'RSEQ',AUS:'AUS'};
 var CONF_COLORS={CW:'#2563eb',OUA:'#7c3aed',RSEQ:'#0891b2',AUS:'#c2410c'};
+var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];
+var HOME_ID=HOME?HOME.id:'';
 var TEAM_CONF={};
 TEAMS.forEach(function(t){TEAM_CONF[t.id]=t.conf;});
 function inConf(t){return !CONF||t.conf===CONF;}
@@ -1744,8 +1751,8 @@ function renderScatterPlot(){
     svg+='<text x="'+(pL-5)+'" y="'+gy.toFixed(1)+'" text-anchor="end" dominant-baseline="middle" fill="#6b7280" font-size="9" font-weight="500">'+dv.toFixed(3)+'</text>';
   }
   // avg lines
-  svg+='<line x1="'+ax.toFixed(1)+'" y1="'+pT+'" x2="'+ax.toFixed(1)+'" y2="'+(pT+iH)+'" stroke="#d52b1e" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>';
-  svg+='<line x1="'+pL+'" y1="'+ay.toFixed(1)+'" x2="'+(pL+iW)+'" y2="'+ay.toFixed(1)+'" stroke="#d52b1e" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>';
+  svg+='<line x1="'+ax.toFixed(1)+'" y1="'+pT+'" x2="'+ax.toFixed(1)+'" y2="'+(pT+iH)+'" stroke="#d4a900" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>';
+  svg+='<line x1="'+pL+'" y1="'+ay.toFixed(1)+'" x2="'+(pL+iW)+'" y2="'+ay.toFixed(1)+'" stroke="#d4a900" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>';
   svg+='<g clip-path="url(#plot-area)">';
   // ghost dots (other conferences) — shown dim, no labels
   ghostT.forEach(function(t){
@@ -1757,10 +1764,11 @@ function renderScatterPlot(){
     var x=xS(ppp(t.off)), y=yS(ppp(t.def)), n=net(t);
     var col=n>=0.10?'#16a34a':n>=-0.05?'#eab308':n>=-0.15?'#f97316':'#dc2626';
     var r=7, op=0.9, sw=1.5;
+    if(t.id===HOME_ID) svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="13" fill="#FFD100" fill-opacity="0.35" stroke="#231F20" stroke-width="2.5"/>';
     svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+col+'" fill-opacity="'+op+'" stroke="#fff" stroke-width="'+sw+'" style="cursor:pointer" onclick="goTeam(\''+t.id+'\')"><title>'+esc(t.name)+' ['+t.conf+']\nOff PPP: '+f3(ppp(t.off))+'\nDef PPP: '+f3(ppp(t.def))+'\nNet: '+(n>=0?'+':'')+f3(n)+'</title></circle>';
     // label everyone inside one conference; league-wide, only the extremes
     var nr=TR[t.id]?TR[t.id].net:99;
-    if(CONF||nr<=5||nr>=validT.length-3){
+    if(CONF||t.id===HOME_ID||nr<=5||nr>=validT.length-3){
       var anchor=x>ax?'start':'end'; var lx=x>ax?x+9:x-9;
       svg+='<text x="'+lx.toFixed(1)+'" y="'+(y+3).toFixed(1)+'" text-anchor="'+anchor+'" fill="#374151" font-size="9" font-weight="600" style="pointer-events:none">'+esc(t.name)+'</text>';
     }
@@ -1777,7 +1785,7 @@ function renderScatterPlot(){
   legend+='<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border)"><svg width="10" height="10" style="vertical-align:middle;margin-right:3px"><circle cx="5" cy="5" r="4" fill="#888" stroke="#fff" stroke-width="1.5"/></svg>Tier 1 (large)</span>';
   legend+='<span><svg width="10" height="10" style="vertical-align:middle;margin-right:3px"><circle cx="5" cy="5" r="3" fill="#888" stroke="#fff" stroke-width="1.2"/></svg>Tier 2</span>';
   legend+='<span><svg width="10" height="10" style="vertical-align:middle;margin-right:3px"><circle cx="5" cy="5" r="2" fill="#9ca3af" fill-opacity="0.4" stroke="#9ca3af" stroke-width="1"/></svg>Tier 3 (dim)</span>';
-  legend+='<span style="color:var(--text3)"><span style="display:inline-block;width:20px;height:2px;border-top:2px dashed #d52b1e;vertical-align:middle;margin-right:5px"></span>avg (filtered set)</span></div>';
+  legend+='<span style="color:var(--text3)"><span style="display:inline-block;width:20px;height:2px;border-top:2px dashed #d4a900;vertical-align:middle;margin-right:5px"></span>avg (filtered set)</span></div>';
   el.innerHTML=svg+legend;
 }
 
@@ -1785,7 +1793,7 @@ function renderScatterPlot(){
 function renderTierDist(){
   var el=document.getElementById('ov-tier-dist'); if(!el) return;
   var tiers={S:0,A:0,B:0,C:0,D:0};
-  var cols={S:'#ffd700',A:'#3fb950',B:'#d52b1e',C:'#d29922',D:'#f85149'};
+  var cols={S:'#ffd700',A:'#3fb950',B:'#d4a900',C:'#d29922',D:'#f85149'};
   var labels={S:'Elite (top 10%)',A:'Strong (top 25%)',B:'Average (50%)',C:'Below Avg',D:'Struggling'};
   var N=TEAMS.length;
   TEAMS.forEach(function(t){
@@ -2111,6 +2119,11 @@ function init(){
   populatePcSelects();
   renderPlayTypeExplorer('Transition');
   renderOverview(); renderTeamRank(); renderPlayerRank();
+  if(HOME_ID){
+    document.getElementById('ti-team').value=HOME_ID; renderTeamIntel();
+    document.getElementById('mu-a').value=HOME_ID;
+    document.getElementById('pi-team').value=HOME_ID; populatePiPlayers();
+  }
 }
 init();
 """
@@ -2118,10 +2131,10 @@ init();
 DATA_BLOCK = ("const TEAMS="+teams_json+";\nconst PLAYERS="+players_json+";\nconst PLAY_TYPES="+pt_json+";\nconst SEASON_LABEL="+json.dumps(SEASON_LABEL)+";\n")
 HTML = ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-    '<title>U SPORTS Women\'s Basketball</title>\n'
+    '<title>Waterloo Warriors WBB Analytics</title>\n'
     '<style>'+CSS+'</style>\n</head>\n<body>\n'+HTML_BODY+
     '<script>\n'+DATA_BLOCK+JS+'</script>\n</body>\n</html>\n'
-).replace('{SEASON}', SEASON_LABEL).replace('{UPDATED}', (' &middot; updated '+UPDATED) if UPDATED else '')
+).replace('{LOGO_SRC}', LOGO_SRC).replace('{SEASON}', SEASON_LABEL).replace('{UPDATED}', (' &middot; updated '+UPDATED) if UPDATED else '')
 
 out = OUT
 out.parent.mkdir(exist_ok=True)
