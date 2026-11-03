@@ -71,6 +71,7 @@ def extract(pr):
 
 class Client:
     def __init__(self):
+        synergy_auth.audit('scrape_start', token_seconds_left=round(synergy_auth.seconds_left()))
         self.s = requests.Session()
         self.H = synergy_auth.headers()
 
@@ -87,6 +88,8 @@ class Client:
                 # was killed elsewhere (e.g. someone logged in in a browser). Do
                 # not refresh or log in in a loop -- that is how accounts lock.
                 left = synergy_auth.seconds_left()
+                synergy_auth.audit('api_401', path=path, token_seconds_left=round(left),
+                                   action='stop' if left > 120 else 'renew')
                 if left > 120:
                     sys.exit(f'401 with {left / 60:.0f} min left on the token: the session was '
                              'ended elsewhere (a browser login does this). Stopping without '

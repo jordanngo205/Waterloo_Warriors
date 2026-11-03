@@ -56,6 +56,28 @@ _MAX_LOGINS_PER_WINDOW = 3
 _LOGIN_WINDOW_SECONDS = 3600
 
 
+def audit_file():
+    return TOKEN_FILE.with_name(TOKEN_FILE.stem + '.auth_log.jsonl')
+
+
+def audit(event, **fields):
+    """Append one auth event to the per-account audit log.
+
+    Every login, refresh, block and unexpected 401 goes here, so a lockout can
+    be reconstructed afterwards: what ran, from where, in what order, and what
+    the server said. Never pass tokens or passwords in `fields`.
+    """
+    rec = {'ts': time.strftime('%Y-%m-%d %H:%M:%S%z'), 'event': event,
+           'script': Path(sys.argv[0]).name if sys.argv and sys.argv[0] else '?',
+           'pid': os.getpid(), 'cwd': os.getcwd(), **fields}
+    try:
+        audit_file().parent.mkdir(parents=True, exist_ok=True)
+        with open(audit_file(), 'a') as f:
+            f.write(json.dumps(rec, default=str) + '\n')
+    except OSError:
+        pass
+
+
 def _login_log():
     # Per account, next to that account's token. A single shared history would
     # let one account's logins block (or hide) another's.
@@ -204,6 +226,7 @@ def _renew_locked(verbose):
         if verbose:
             print('   [another process already refreshed; reusing]', flush=True)
         return tok
+    left_before = round(seconds_left(tok))
     r = requests.post(
         f'{AUTH_BASE}/connect/token',
         headers={'Content-Type': 'application/x-www-form-urlencoded',
@@ -217,6 +240,9 @@ def _renew_locked(verbose):
     except ValueError:
         data = {}
     if r.status_code != 200 or 'access_token' not in data:
+        audit('refresh_failed', status=r.status_code, error=data.get('error'),
+              error_description=data.get('error_description'),
+              token_seconds_left=left_before)
         # A dead refresh token must be discarded, not kept and presented again.
         # Servers treat a reused refresh token as a stolen one and revoke the
         # whole token family; retrying it cannot succeed and can only make
@@ -241,6 +267,8 @@ def _renew_locked(verbose):
             print('   [falling back to a full login]', flush=True)
         return None
     out = save(data, keep_refresh_from=tok)
+    audit('refresh_ok', expires_in=out['expires_in'], token_seconds_left=left_before,
+          new_refresh_token=bool(data.get('refresh_token')))
     if verbose:
         print(f'   [token refreshed, no login needed, good for '
               f'{out["expires_in"] // 60}min]', flush=True)
@@ -263,6 +291,8 @@ def check_login_allowed():
         failed_at = None
     if failed_at and time.time() - failed_at < _FAILED_LOGIN_COOLDOWN:
         mins = (failed_at + _FAILED_LOGIN_COOLDOWN - time.time()) / 60
+        audit('login_blocked', reason='recent_failure',
+              minutes_since_failure=round((time.time() - failed_at) / 60, 1))
         raise LoginRateLimited(
             f'refusing to log in: the last login FAILED, {(time.time() - failed_at) / 60:.0f} '
             f'min ago. That means a wrong password or a locked account, and a '
@@ -271,6 +301,7 @@ def check_login_allowed():
             f'Override only once you know the password is right: rm {_failure_file()}')
     recent = _recent_logins()
     if len(recent) >= _MAX_LOGINS_PER_WINDOW:
+        audit('login_blocked', reason='hourly_cap', logins_last_hour=len(recent))
         mins = (recent[0] + _LOGIN_WINDOW_SECONDS - time.time()) / 60
         raise LoginRateLimited(
             f'refusing to log in: {len(recent)} logins already in the last '
@@ -301,6 +332,7 @@ def login(verbose=True):
         if verbose:
             print(f'   [waiting {wait:.0f}s before login]', flush=True)
         time.sleep(wait)
+    audit('auto_login', reason='no valid token and refresh unavailable or failed')
     r = subprocess.run([sys.executable, str(DIR / 'do_auth.py')],
                        cwd=str(DIR), capture_output=True, text=True,
                        stdin=subprocess.DEVNULL)

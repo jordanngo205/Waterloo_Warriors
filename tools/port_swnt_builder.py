@@ -129,6 +129,20 @@ rep("pulse(fP(leagueDefPPP),'Avg Def PPP'", "pulse(f3(leagueDefPPP),'Avg Def PPP
 rep("'<span class=\"tier-chip\" style=\"background:'+tc+';color:'+ttc+';font-size:9px;padding:1px 5px;border-radius:3px\">'",
     "'<span class=\"tier-chip\" style=\"display:inline-block;height:auto;background:'+tc+';color:'+ttc+';font-size:9px;padding:1px 5px;border-radius:3px\">'")
 
+# ---- PPP cutoffs: calibrate to this league, not FIBA ------------------------
+# The colour/label thresholds (1.10 "Elite", 0.78 "hot" defence, ...) are fixed
+# numbers tuned for FIBA, whose league PPP is ~0.81. U SPORTS runs ~0.66 under
+# Synergy's possession counting, so fixed cutoffs paint every defence elite and
+# every offence poor. Scale every cutoff by league PPP / 0.81 instead.
+rep("// ── Color helpers ─", """// League PPP calibration: thresholds below were tuned at a league PPP of 0.81.
+var LEAGUE_PPP=(function(){var p=0,n=0;TEAMS.forEach(function(t){p+=t.off.pts||0;n+=t.off.p||0;});return n?p/n:0.81;})();
+var PPP_SCALE=LEAGUE_PPP/0.81;
+// ── Color helpers ─""")
+for fn in ('cPPP', 'cPPPD', 'pppRating', 'pppRatingColor'):
+    rep("function "+fn+"(v){", "function "+fn+"(v){ v=v/PPP_SCALE;")
+# defence was mirrored as 1.8-PPP (FIBA-only); mirror around the league average
+rep("pppRating(1.8-defPPP)", "pppRating(2*LEAGUE_PPP-defPPP)")
+
 # ---- global filter bar: quality toggle -> conference toggle ----------------
 rep_re(r'<div class="qual-bar">.*?<span id="qual-label"[^\n]*\n</div>\n',
 '''<div class="qual-bar">

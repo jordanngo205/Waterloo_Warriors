@@ -537,12 +537,15 @@ function esc(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// League PPP calibration: thresholds below were tuned at a league PPP of 0.81.
+var LEAGUE_PPP=(function(){var p=0,n=0;TEAMS.forEach(function(t){p+=t.off.pts||0;n+=t.off.p||0;});return n?p/n:0.81;})();
+var PPP_SCALE=LEAGUE_PPP/0.81;
 // ── Color helpers ─────────────────────────────────────────────────────────────
-function cPPP(v){
+function cPPP(v){ v=v/PPP_SCALE;
   if(v>=1.10) return 'hot'; if(v>=0.92) return 'warm';
   if(v>=0.72) return 'cool'; if(v>0) return 'cold'; return '';
 }
-function cPPPD(v){
+function cPPPD(v){ v=v/PPP_SCALE;
   if(v<=0) return '';
   if(v<=0.78) return 'hot'; if(v<=0.88) return 'warm';
   if(v<=1.02) return ''; if(v<=1.12) return 'cool'; return 'cold';
@@ -569,12 +572,12 @@ function tierCol(pct){
 }
 function tierTxtCol(pct){ return '#fff'; }
 
-function pppRating(v){
+function pppRating(v){ v=v/PPP_SCALE;
   if(v>=1.10) return 'Elite'; if(v>=0.95) return 'Very Good';
   if(v>=0.85) return 'Good';  if(v>=0.75) return 'Average';
   if(v>=0.60) return 'Below Avg'; return 'Poor';
 }
-function pppRatingColor(v){
+function pppRatingColor(v){ v=v/PPP_SCALE;
   if(v>=1.05) return '#16a34a'; if(v>=0.90) return '#4ade80';
   if(v>=0.80) return '#6b7280'; if(v>=0.70) return '#c2410c'; return '#dc2626';
 }
@@ -1280,7 +1283,7 @@ function renderTeamIntel(){
     '<div class="net-box">'+
       '<div class="net-label">Defensive PPP</div>'+
       '<div class="net-val" style="color:'+(defPPP>0?pppRatingColor(1.8-defPPP):'var(--text3)')+'">'+f3(defPPP)+'</div>'+
-      '<div class="net-rank">#'+defRank+' of '+N+' &middot; '+pppRating(1.8-defPPP)+'</div>'+
+      '<div class="net-rank">#'+defRank+' of '+N+' &middot; '+pppRating(2*LEAGUE_PPP-defPPP)+'</div>'+
       netBadge(defPct)+
     '</div>'+
     '</div>';
