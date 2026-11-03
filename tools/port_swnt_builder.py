@@ -255,6 +255,15 @@ rep("Women's Basketball Analytics{UPDATED}", "Women's Basketball &middot; U SPOR
 rep("'<title>U SPORTS Women\\'s Basketball</title>\\n'", "'<title>Waterloo Warriors WBB Analytics</title>\\n'")
 rep(".replace('{SEASON}', SEASON_LABEL)", ".replace('{LOGO_SRC}', LOGO_SRC).replace('{SEASON}', SEASON_LABEL)")
 
+# radar fill was colour+'22' (hex alpha), which breaks for anything but #rrggbb;
+# use fill-opacity instead. Radar in gold; two-sided comparisons are gold vs black.
+rep("""fill="'+color+'22" stroke="'+color+'" stroke-width="2"/>';""",
+    """fill="'+color+'" fill-opacity="0.28" stroke="'+color+'" stroke-width="2.5"/>';""")
+rep("var radar=radarSvg(radarVals,radarLabels2,countryColor(t.name));",
+    "var radar=radarSvg(radarVals,radarLabels2,'#e0b400');")
+rep("var colA=countryColor(ta.name), colB=countryColor(tb.name);", "var colA='#a88600', colB='#231F20';")
+rep("var colA_team=countryColor(pA.team), colB_team=countryColor(pB.team);", "var colA_team='#a88600', colB_team='#231F20';")
+
 # home team: defaults + highlight
 rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")
 rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'",

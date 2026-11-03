@@ -740,7 +740,7 @@ function radarSvg(vals, labels, color) {
     var rv=r*(vals[i]/100);
     pts.push((cx+Math.cos(a)*rv).toFixed(1)+','+(cy+Math.sin(a)*rv).toFixed(1));
   }
-  svg+='<polygon points="'+pts.join(' ')+'" fill="'+color+'22" stroke="'+color+'" stroke-width="2"/>';
+  svg+='<polygon points="'+pts.join(' ')+'" fill="'+color+'" fill-opacity="0.28" stroke="'+color+'" stroke-width="2.5"/>';
   // dots
   for(var i=0;i<n;i++){
     var a=(i/n)*Math.PI*2-Math.PI/2;
@@ -1126,7 +1126,7 @@ function renderMatchup(){
   for(var i=0;i<TEAMS.length;i++){if(TEAMS[i].id===aId) ta=TEAMS[i];if(TEAMS[i].id===bId) tb=TEAMS[i];}
   if(!ta||!tb) return;
   var N=TEAMS.length;
-  var colA=countryColor(ta.name), colB=countryColor(tb.name);
+  var colA='#a88600', colB='#231F20';
 
   var statDefs=[
     ['PPP Off',  function(t){return ppp(t.off);}, f3, false, 'off_ppp'],
@@ -1297,7 +1297,7 @@ function renderTeamIntel(){
   var radarKeys2=['off_ppp','off_efg','off_fg3','off_to','def_ppp','pace','off_ftr','def_to'];
   var radarLabels2=['Off PPP','EFG%','3FG%','Ball Sec.','Defense','Pace','FT Draw','Force TO'];
   var radarVals=radarKeys2.map(function(k){var rk=r[k];return rk?rPct(rk,N):50;});
-  var radar=radarSvg(radarVals,radarLabels2,countryColor(t.name));
+  var radar=radarSvg(radarVals,radarLabels2,'#e0b400');
 
   // Auto analysis
   var an=autoAnalysis(t);
@@ -1962,7 +1962,7 @@ function renderPlayerCompare(){
             rPct(pr.fg2,NP)||0, rPct(pr.fg3,NP)||0, rPct(pr.to,NP)||0,
             rPct(pr.ftr,NP)||0, rPct(pr.vol,NP)||0];
   }
-  var colA_team=countryColor(pA.team), colB_team=countryColor(pB.team);
+  var colA_team='#a88600', colB_team='#231F20';
   var svgA=radarSvg(rpv(prA),rLabels,colA_team);
   var svgB=radarSvg(rpv(prB),rLabels,colB_team);
 
