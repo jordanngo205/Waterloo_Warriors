@@ -44,6 +44,7 @@ def cpr(pr):
     # Field goals are 2s + 3s. Synergy's fgMade/fgAttempt are something else.
     return {'p':pr.get('possessions',0),'pts':pr.get('pointMade',0),
         'fa':a2+a3,'fm':m2+m3,'a2':a2,'m2':m2,'a3':a3,'m3':m3,
+        'gp':pr.get('gp',0),
         'to':pr.get('turnover',0),'fta':pr.get('ftAttempt',0),
         'ftm':pr.get('ftMade',0),'ftt':pr.get('ftTimes',0),
         'sa':pr.get('shotAttempt',0),'sq':round(pr.get('shotQualityTotal',0) or 0,3),
@@ -87,6 +88,28 @@ for p in _load('players_all.json', []):
         'pt_off':{k:cpt(v) for k,v in p['play_types']['offense'].items()},
         'pt_def':{k:cpt(v) for k,v in pt_def.items()}})
 PLAYERS.sort(key=lambda x:x['name'])
+
+def _rank_slices(items, key):
+    """Re-rank every play-type slice so rank 1 is always BEST.
+
+    The scraped pppRank is "highest PPP = 1" on both sides, which on defence
+    means rank 1 is the team that ALLOWS the most -- the dashboard then called
+    the worst defences elite. Rank defence ascending, offence descending, and
+    store a percentile (pp, 100 = best) for the rating labels.
+    """
+    for side in ('pt_off', 'pt_def'):
+        names = {k for it in items for k in it[side]}
+        for pt in names:
+            pool = [it[side][pt] for it in items if (it[side].get(pt) or {}).get('p', 0) > 0]
+            pool.sort(key=lambda d: d['pts'] / d['p'], reverse=(side == 'pt_off'))
+            n = len(pool)
+            for i, d in enumerate(pool):
+                d['pr'] = i + 1
+                d['pn'] = n
+                d['pp'] = round((n - 1 - i) / (n - 1) * 100) if n > 1 else 50
+
+_rank_slices(TEAMS, 'pt')
+_rank_slices(PLAYERS, 'pt')
 SEASON_LABEL = META.get('season', SEASON)
 UPDATED = (META.get('scraped_at') or '')[:10]
 import base64
@@ -269,6 +292,191 @@ rep("var colA_team=countryColor(pA.team), colB_team=countryColor(pB.team);", "va
 rep("""'&#8805;35% 3PA rate')+
     pulse(f1(avgNet),'Avg Net Rating','off PPP minus def PPP');""",
     """'&#8805;35% 3PA rate');""")
+
+# ---- play-type ratings: rank-based, correct on defence -----------------------
+# The RATING column used fixed PPP cutoffs (so high-scoring play types like
+# putbacks were "Elite" for most teams) and, on defence, called a HIGH PPP
+# allowed elite. Rate by percentile within the play type instead, and flag
+# small samples.
+rep("// ── Color helpers ─", """function ptRatingCell(s,min){
+  if(!s||!s.p) return '<td>&mdash;</td>';
+  if(s.p<min) return '<td style="color:var(--text3)">Low sample</td>';
+  var p=s.pp, l=p>=90?'Elite':p>=75?'Very Good':p>=50?'Above Avg':p>=25?'Below Avg':'Poor';
+  var c=p>=90?'#16a34a':p>=75?'#22c55e':p>=50?'#6b7280':p>=25?'#c2410c':'#dc2626';
+  return '<td style="color:'+c+';font-weight:600">'+l+'</td>';
+}
+// ── Color helpers ─""")
+rep("""        '<td style="color:'+pppRatingColor(pv)+'">'+((s.p||0)?pppRating(pv):'&mdash;')+'</td>'+""",
+    """        ptRatingCell(s,15)+""")
+rep("""        '<td style="color:'+pppRatingColor(pv3)+'">'+pppRating(pv3)+'</td>'+""",
+    """        ptRatingCell(s,10)+""")
+rep("""          '<td style="color:'+pppRatingColor(dv)+'">'+pppRating(dv)+'</td>'+""",
+    """          ptRatingCell(s,10)+""")
+rep("""          '<td class="'+cPPP(dv)+'">'+f3(dv)+'</td>'+""", """          '<td class="'+cPPPD(dv)+'">'+f3(dv)+'</td>'+""")
+rep("var pv3=ppp(s); var pRk=s.pr; var ptPct=pRk?rPct(pRk,NP):null;", "var pv3=ppp(s); var pRk=s.pr; var ptPct=pRk?s.pp:null;")
+rep("var dv=ppp(s); var pRk=s.pr; var ptPct=pRk?rPct(pRk,NP):null;", "var dv=ppp(s); var pRk=s.pr; var ptPct=pRk?s.pp:null;")
+rep("""vsLg='<span class="pt-vs '+(diff>=0?'pt-vs-up':'pt-vs-dn')+'">'""",
+    """vsLg='<span class="pt-vs '+((side==='def'?-diff:diff)>=0?'pt-vs-up':'pt-vs-dn')+'">'""")
+
+# ---- relative colouring ------------------------------------------------------
+# Every cell colour used fixed cutoffs (FG% "hot" at 50%, EFG% at 55%, ...) tuned
+# for FIBA, and the Defense views reused the offence colours, so a HIGH FG%
+# allowed showed green. Colour by percentile within the relevant U SPORTS pool
+# instead, flipped wherever lower is better.
+rep("// ── Color helpers ─", """var STATF={ppp:ppp,fg:fg,efg:efg,fg2:fg2,fg3:fg3,to:topR,ts:ts};
+var _POOL={};
+function _pool(key,items,fn){
+  if(!_POOL[key]) _POOL[key]=items.map(fn).filter(function(x){return isFinite(x);}).sort(function(a,b){return a-b;});
+  return _POOL[key];
+}
+// percentile (100 = best) of v within a sorted pool
+function pctIn(arr,v,lowerBetter){
+  if(!arr.length||!isFinite(v)) return null;
+  var lo=0,hi=arr.length; while(lo<hi){var m=(lo+hi)>>1; if(arr[m]<v) lo=m+1; else hi=m;}
+  var hi2=lo; while(hi2<arr.length&&arr[hi2]===v) hi2++;
+  var p=((lo+hi2)/2)/arr.length*100;          // mid-rank, so ties land in the middle
+  return lowerBetter?100-p:p;
+}
+function cRel(p){ if(p===null||p===undefined) return ''; return p>=80?'hot':p>=60?'warm':p>=40?'':p>=20?'cool':'cold'; }
+// team cell: side 'off'|'def'. On defence lower is better, except forcing turnovers.
+function tC(stat,side,d){
+  if(!d||!d.p) return '';
+  var lb=side==='def'?(stat!=='to'):(stat==='to');
+  var arr=_pool('T'+side+stat,TEAMS.filter(function(t){return t[side].p>0;}),function(t){return STATF[stat](t[side]);});
+  return cRel(pctIn(arr,STATF[stat](d),lb));
+}
+// player cell (offence), pool = players with 15+ poss overall, or 5+ in a play type
+function pC(stat,d,pt){
+  if(!d||!d.p) return '';
+  var key='P'+(pt||'')+stat;
+  var arr=_pool(key,PLAYERS.filter(function(p){var x=pt?p.pt_off[pt]:p.off;return x&&x.p>=(pt?5:15);}),
+    function(p){return STATF[stat](pt?p.pt_off[pt]:p.off);});
+  return cRel(pctIn(arr,STATF[stat](d),stat==='to'));
+}
+// ── Color helpers ─""")
+# team rankings table (offense or defense view)
+rep("""      '<td class="'+(isD?cPPPD(pv):cPPP(pv))+'">'+f3(pv)+'</td>'+
+      '<td class="'+cPct(fg(s),50,33)+'">'+fP(fg(s))+'</td>'+
+      '<td class="'+cPct(efg(s),55,38)+'">'+fP(efg(s))+'</td>'+
+      '<td class="'+cPct(fg2(s),52,36)+'">'+fP(fg2(s))+'</td>'+
+      '<td class="'+cPct(fg3(s),38,25)+'">'+fP(fg3(s))+'</td>'+""",
+"""      '<td class="'+tC('ppp',trSide,s)+'">'+f3(pv)+'</td>'+
+      '<td class="'+tC('fg',trSide,s)+'">'+fP(fg(s))+'</td>'+
+      '<td class="'+tC('efg',trSide,s)+'">'+fP(efg(s))+'</td>'+
+      '<td class="'+tC('fg2',trSide,s)+'">'+fP(fg2(s))+'</td>'+
+      '<td class="'+tC('fg3',trSide,s)+'">'+fP(fg3(s))+'</td>'+""")
+rep("""      '<td class="'+cTO(topR(s))+'">'+fP(topR(s))+'</td>'+
+      '<td>'+fP(ftr(s))+'</td>'+""", """      '<td class="'+tC('to',trSide,s)+'">'+fP(topR(s))+'</td>'+
+      '<td>'+fP(ftr(s))+'</td>'+""")
+# player rankings table
+rep("""      '<td class="'+cPPP(pv)+'">'+f3(pv)+(pRank""", """      '<td class="'+pC('ppp',d,ptF)+'">'+f3(pv)+(pRank""")
+rep("""      '<td class="'+cPct(fg(d),50,33)+'">'+fP(fg(d))+'</td>'+
+      '<td class="'+cPct(ev,55,38)+'">'+fP(ev)+'</td>'+
+      '<td class="'+cPct(fg2(d),52,36)+'">'+fP(fg2(d))+'</td>'+""",
+"""      '<td class="'+pC('fg',d,ptF)+'">'+fP(fg(d))+'</td>'+
+      '<td class="'+pC('efg',d,ptF)+'">'+fP(ev)+'</td>'+
+      '<td class="'+pC('fg2',d,ptF)+'">'+fP(fg2(d))+'</td>'+""")
+rep("""      '<td class="'+cPct(fg3(d),38,25)+'">'+fP(fg3(d))+'</td>'+""", """      '<td class="'+pC('fg3',d,ptF)+'">'+fP(fg3(d))+'</td>'+""")
+rep("""      '<td class="'+cTO(topR(d))+'">'+fP(topR(d))+'</td>'+
+      '<td>'+fP(ts(d))+'</td>'+""", """      '<td class="'+pC('to',d,ptF)+'">'+fP(topR(d))+'</td>'+
+      '<td>'+fP(ts(d))+'</td>'+""")
+# team intel: play-type tables (offence + defence) -> percentile within the play type
+rep("""        '<td class="'+(side==='off'?cPPP(pv):cPPPD(pv))+'">'+((s.p||0)?f3(pv):'&mdash;')+vsLg+'</td>'+""",
+    """        '<td class="'+((s.p||0)>=15?cRel(s.pp):'')+'">'+((s.p||0)?f3(pv):'&mdash;')+vsLg+'</td>'+""")
+# team intel: roster (player offence)
+rep("""      '<td class="'+cPPP(pv2)+'">'+((s.p||0)?f3(pv2):'&mdash;')+'</td>'+""", """      '<td class="'+pC('ppp',s)+'">'+((s.p||0)?f3(pv2):'&mdash;')+'</td>'+""")
+rep("""      '<td class="'+cTO(topR(s))+'">'+((s.p||0)?fP(topR(s)):'&mdash;')+'</td>'+""", """      '<td class="'+pC('to',s)+'">'+((s.p||0)?fP(topR(s)):'&mdash;')+'</td>'+""")
+# player intel: play-type tables
+rep("""        '<td class="'+cPPP(pv3)+'">'+f3(pv3)+'</td>'+""", """        '<td class="'+(s.p>=10?cRel(s.pp):'')+'">'+f3(pv3)+'</td>'+""")
+rep("""          '<td class="'+cPPPD(dv)+'">'+f3(dv)+'</td>'+""", """          '<td class="'+(s.p>=10?cRel(s.pp):'')+'">'+f3(dv)+'</td>'+""")
+# play-type explorer: conference filter + relative colours
+rep("var teams=TEAMS.filter(function(t){return t.pt_off[activePTE]&&", "var teams=TEAMS.filter(function(t){return inConf(t)&&t.pt_off[activePTE]&&")
+rep("var players=PLAYERS.filter(function(p){return p.pt_off[activePTE]&&", "var players=PLAYERS.filter(function(p){return pInConf(p)&&p.pt_off[activePTE]&&")
+rep("""      '<td class="'+cPPP(v)+'">'+f3(v)+'</td>'+
+      '<td><span style="color:'+diffCol+';font-weight:700;font-size:11px">'+(diff>=0?'+':'')+diff.toFixed(3)+'</span></td>'+
+      '<td>'+fP(efg(d))+'</td>'+
+      '<td class="'+cTO(topR(d))+'">'+fP(topR(d))+'</td>'+
+    '</tr>';
+  });
+  tHtml+=""", """      '<td class="'+cRel(d.pp)+'">'+f3(v)+'</td>'+
+      '<td><span style="color:'+diffCol+';font-weight:700;font-size:11px">'+(diff>=0?'+':'')+diff.toFixed(3)+'</span></td>'+
+      '<td>'+fP(efg(d))+'</td>'+
+      '<td class="'+tC('to','off',d)+'">'+fP(topR(d))+'</td>'+
+    '</tr>';
+  });
+  tHtml+=""")
+rep("""      '<td class="'+cPPP(v)+'">'+f3(v)+'</td>'+
+      '<td><span style="color:'+diffCol+';font-weight:700;font-size:11px">'+(diff>=0?'+':'')+diff.toFixed(3)+'</span></td>'+
+      '<td>'+fP(efg(d))+'</td>'+
+      '<td class="'+cTO(topR(d))+'">'+fP(topR(d))+'</td>'+
+    '</tr>';
+  });
+  pHtml+=""", """      '<td class="'+pC('ppp',d,activePTE)+'">'+f3(v)+'</td>'+
+      '<td><span style="color:'+diffCol+';font-weight:700;font-size:11px">'+(diff>=0?'+':'')+diff.toFixed(3)+'</span></td>'+
+      '<td>'+fP(efg(d))+'</td>'+
+      '<td class="'+pC('to',d,activePTE)+'">'+fP(topR(d))+'</td>'+
+    '</tr>';
+  });
+  pHtml+=""")
+# ---- direction / pairing fixes found in the full sweep -----------------------
+# Team Intel: Def FG% was shown with the 2FG% rank; add a real def_fg rank.
+rep("  {key:'def_fg2',  lb:true,  fn:function(t){return fg2(t.def);}},",
+    "  {key:'def_fg2',  lb:true,  fn:function(t){return fg2(t.def);}},\n  {key:'def_fg',   lb:true,  fn:function(t){return fg(t.def);}},")
+rep("['Def FG%',   fP(fg(d)),      r['def_fg2']? r['def_fg2']:null],", "['Def FG%',   fP(fg(d)),      r['def_fg']],")
+# Defensive PPP colour used the FIBA-only 1.8-PPP mirror
+rep("pppRatingColor(1.8-defPPP)", "pppRatingColor(2*LEAGUE_PPP-defPPP)")
+# Style stats (3PA Rate, Pace) are not better-or-worse: show the rank, no grade
+rep("""function pctRow(label, val, rank, total) {
+  var pct = rPct(rank, total);""", """function pctRow(label, val, rank, total, neutral) {
+  var pct = rPct(rank, total);
+  if(neutral) return '<div class="pct-row">'+
+    '<div class="pct-label">'+label+'</div>'+
+    '<div class="pct-val">'+val+'</div>'+
+    '<div class="pct-rank">#'+rank+'/'+total+'</div>'+
+    '<div class="pct-track"><div class="pct-fill" style="width:'+pct+'%;background:var(--border2)"></div></div>'+
+    '<div class="tier-chip" style="background:var(--bg4);color:var(--text3);font-size:8px" title="style, not quality">&middot;</div>'+
+    '</div>';""")
+rep("['3PA Rate',  fP(rate3(o)),   r['off_3rate']],", "['3PA Rate',  fP(rate3(o)),   r['off_3rate'], 1],")
+rep("['Pace',      f1(pace(t)),    r['pace']],", "['Pace',      f1(pace(t)),    r['pace'], 1],")
+rep("offStatDefs.forEach(function(x){offRankHtml+=x[2]?pctRow(x[0],x[1],x[2],N):'';});",
+    "offStatDefs.forEach(function(x){offRankHtml+=x[2]?pctRow(x[0],x[1],x[2],N,x[3]):'';});")
+# Radars: swap the Pace axis (style) for Def EFG% (quality)
+rep("var radarKeys2=['off_ppp','off_efg','off_fg3','off_to','def_ppp','pace','off_ftr','def_to'];",
+    "var radarKeys2=['off_ppp','off_efg','off_fg3','off_to','def_ppp','def_efg','off_ftr','def_to'];")
+rep("var radarLabels2=['Off PPP','EFG%','3FG%','Ball Sec.','Defense','Pace','FT Draw','Force TO'];",
+    "var radarLabels2=['Off PPP','EFG%','3FG%','Ball Sec.','Def PPP','Def EFG%','FT Draw','Force TO'];")
+rep("var radarKeys=['off_ppp','off_efg','off_fg3','off_to','def_ppp','pace'];", "var radarKeys=['off_ppp','off_efg','off_fg3','off_to','def_ppp','def_efg'];")
+rep("var radarLabels=['Off PPP','EFG%','3FG%','Ball Sec.','Defense','Pace'];", "var radarLabels=['Off PPP','EFG%','3FG%','Ball Sec.','Def PPP','Def EFG%'];")
+# Scouting report: no pace, honest label, and only real strengths/weaknesses
+rep("    {key:'pace',     s:'Pace / tempo',                 w:'Pace / tempo'},\n", "")
+rep("{key:'def_efg',  s:'Perimeter defense (EFG% allowed)', w:'Perimeter defense (EFG% allowed)'},",
+    "{key:'def_efg',  s:'Shooting defense (EFG% allowed)', w:'Shooting defense (EFG% allowed)'},")
+rep("var strengths=scored.slice(0,TOP).map(", "var strengths=scored.filter(function(d){return d.pct>=60;}).slice(0,TOP).map(")
+rep("var weaknesses=scored.slice(-TOP).reverse().map(", "var weaknesses=scored.filter(function(d){return d.pct<=40;}).slice(-TOP).reverse().map(")
+# Matchup: style rows have no winner; defensive play types: lower PPP allowed wins
+rep("    var aWins=lb?av<bv:av>=bv;", "    var neutral=(rkey==='pace'||rkey==='off_3rate');\n    var aWins=lb?av<bv:av>=bv, bWins=!aWins;\n    if(neutral){aWins=false;bWins=false;}")
+rep("    var aBg=aWins?colA:'var(--border2)', bBg=!aWins?colB:'var(--border2)';\n    var aCol=aWins?colA:'var(--text)', bCol=!aWins?colB:'var(--text)';",
+    "    var aBg=aWins?colA:'var(--border2)', bBg=bWins?colB:'var(--border2)';\n    var aCol=aWins?colA:'var(--text)', bCol=bWins?colB:'var(--text)';")
+rep("function ptButterfly(ptObjA, ptObjB, titleA, titleB, cA, cB){", "function ptButterfly(ptObjA, ptObjB, titleA, titleB, cA, cB, lowerBetter){")
+rep("var winA=vA!==null&&vB!==null&&vA>vB, winB=vA!==null&&vB!==null&&vB>vA;",
+    "var both=vA!==null&&vB!==null, winA=both&&(lowerBetter?vA<vB:vA>vB), winB=both&&(lowerBetter?vB<vA:vB>vA);")
+rep("var ptDefHtml=ptButterfly(ta.pt_def,tb.pt_def,esc(ta.name),esc(tb.name),colA,colB);",
+    "var ptDefHtml=ptButterfly(ta.pt_def,tb.pt_def,esc(ta.name),esc(tb.name),colA,colB,true);")
+
+# Synergy has no shot-quality data for U SPORTS: hide the panel rather than show an empty box
+rep("  if(!validT.length){el.innerHTML='<div class=\"empty\">No shot quality data</div>';return;}",
+    "  if(!validT.length){var col=el.parentElement.parentElement; col.style.display='none'; col.parentElement.style.gridTemplateColumns='1fr'; return;}")
+
+# scatter legend still described FIBA tiers
+rep_re(r"  legend\+='<span style=\"margin-left:8px;padding-left:8px;border-left:1px solid var\(--border\)\"><svg[^\n]*Tier 1 \(large\)</span>';\n[^\n]*Tier 2</span>';\n[^\n]*Tier 3 \(dim\)</span>';\n",
+  """  legend+='<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border)"><svg width="14" height="14" style="vertical-align:middle;margin-right:3px"><circle cx="7" cy="7" r="6" fill="#FFD100" fill-opacity="0.35" stroke="#231F20" stroke-width="1.5"/></svg>Waterloo</span>';
+  legend+='<span><svg width="10" height="10" style="vertical-align:middle;margin-right:3px"><circle cx="5" cy="5" r="4" fill="#9ca3af" fill-opacity="0.3" stroke="#9ca3af" stroke-width="1"/></svg>other conferences (when filtered)</span>';
+""")
+# early season: a 5+ GP default hides whole conferences (RSEQ has 2-4 tagged games)
+rep("""        <option value="0">All</option><option value="3">3+</option>
+        <option value="5" selected>5+</option><option value="10">10+</option>""",
+    """        <option value="0" selected>All</option><option value="3">3+</option>
+        <option value="5">5+</option><option value="10">10+</option>""")
 
 # home team: defaults + highlight
 rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")

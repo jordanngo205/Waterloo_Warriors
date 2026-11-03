@@ -143,10 +143,12 @@ def usports_teams(games):
     return teams
 
 
-def assign_ranks(by_id):
-    """pppRank / possRank within the U SPORTS pool for one slice."""
+def assign_ranks(by_id, lower_is_better=False):
+    """pppRank / possRank within the U SPORTS pool for one slice. pppRank 1 is
+    always the BEST: highest PPP on offence, lowest PPP allowed on defence."""
     items = [(k, d) for k, d in by_id.items() if d.get('possessions', 0) > 0]
-    by_ppp = sorted(items, key=lambda x: x[1]['pointMade'] / x[1]['possessions'], reverse=True)
+    by_ppp = sorted(items, key=lambda x: x[1]['pointMade'] / x[1]['possessions'],
+                    reverse=not lower_is_better)
     by_poss = sorted(items, key=lambda x: x[1]['possessions'], reverse=True)
     pr = {k: i + 1 for i, (k, _) in enumerate(by_ppp)}
     qr = {k: i + 1 for i, (k, _) in enumerate(by_poss)}
@@ -184,7 +186,7 @@ def main():
                 tid = (pr.get('team') or {}).get('id')
                 if tid in T:
                     by[tid] = extract(pr)
-            assign_ranks(by)
+            assign_ranks(by, lower_is_better=(side == 'defense'))
             for tid, d in by.items():
                 if name == 'Overall':
                     T[tid]['overall'][side] = d
@@ -209,7 +211,7 @@ def main():
                     P[pid] = {'player': {'id': pid, 'name': pl.get('name')},
                               'team': {'id': tid, 'name': teams[tid]['name']},
                               'gp': 0, 'overall': {}, 'play_types': {'offense': {}, 'defense': {}}}
-            assign_ranks(by)
+            assign_ranks(by, lower_is_better=(side == 'defense'))
             for pid, d in by.items():
                 if name == 'Overall':
                     P[pid]['overall'][side] = d

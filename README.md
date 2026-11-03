@@ -14,6 +14,8 @@ python3 src/synergy_auth.py          # is there a live session?
 python3 src/do_auth.py               # only if not -- one interactive login
 python3 src/scrape_usports.py        # -> data/2026-2027/
 python3 src/build_dashboard.py       # -> docs/index.html (GitHub Pages)
+python3 tools/audit.py               # data consistency (0 failed = good)
+./tools/check_dashboard.sh           # renders the page, checks every tab and label
 ```
 
 Pass a season to either script for another year, e.g. `2025-2026` (ids in `src/config.py`).
