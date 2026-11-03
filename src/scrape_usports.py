@@ -90,7 +90,8 @@ class Client:
                 if left > 120:
                     sys.exit(f'401 with {left / 60:.0f} min left on the token: the session was '
                              'ended elsewhere (a browser login does this). Stopping without '
-                             'retrying. Log in once with `python3 src/do_auth.py`, then rerun.')
+                             'retrying. Close any Synergy browser tabs and wait before logging in again; '
+                             'if the account is locked, a login attempt extends the lock.')
                 self.H.update(synergy_auth.on_401())
                 continue
             print(f'   {path} -> {r.status_code}, retrying', flush=True)
