@@ -57,7 +57,34 @@ _LOGIN_WINDOW_SECONDS = 3600
 
 
 def _login_log():
-    return TOKEN_FILE.parent / 'login_history.json'
+    # Per account, next to that account's token. A single shared history would
+    # let one account's logins block (or hide) another's.
+    return TOKEN_FILE.with_name(TOKEN_FILE.stem + '.login_history.json')
+
+
+# After ANY failed login, block further logins for this long. A failure means
+# either a wrong password or an account that is already locked -- Synergy
+# returns the same message for both -- and in the locked case every further
+# attempt extends the lock. Nothing is learned by retrying, so nothing retries.
+_FAILED_LOGIN_COOLDOWN = 2 * 3600
+
+
+def _failure_file():
+    return TOKEN_FILE.with_name(TOKEN_FILE.stem + '.login_failed')
+
+
+def record_login_failure():
+    try:
+        _failure_file().write_text(str(time.time()))
+    except OSError:
+        pass
+
+
+def clear_login_failure():
+    try:
+        _failure_file().unlink()
+    except OSError:
+        pass
 
 
 def _recent_logins():
@@ -230,6 +257,18 @@ def check_login_allowed():
     they stop. That path bypassed this guard entirely until do_auth started
     calling it.
     """
+    try:
+        failed_at = float(_failure_file().read_text())
+    except (OSError, ValueError):
+        failed_at = None
+    if failed_at and time.time() - failed_at < _FAILED_LOGIN_COOLDOWN:
+        mins = (failed_at + _FAILED_LOGIN_COOLDOWN - time.time()) / 60
+        raise LoginRateLimited(
+            f'refusing to log in: the last login FAILED, {(time.time() - failed_at) / 60:.0f} '
+            f'min ago. That means a wrong password or a locked account, and a '
+            f'retry extends a lock. Check SYNERGY_PASSWORD in .env, close any '
+            f'Synergy browser tabs, and wait {mins:.0f} min.\n'
+            f'Override only once you know the password is right: rm {_failure_file()}')
     recent = _recent_logins()
     if len(recent) >= _MAX_LOGINS_PER_WINDOW:
         mins = (recent[0] + _LOGIN_WINDOW_SECONDS - time.time()) / 60

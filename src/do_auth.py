@@ -34,9 +34,15 @@ session = requests.Session()
 cv = pkce.generate_code_verifier(length=128)
 cc = pkce.get_code_challenge(cv)
 
-token_type, refresh_token, access_token = sf.get_access_token(
-    session, cv, cc,
-    os.getenv('SYNERGY_USERNAME'), os.getenv('SYNERGY_PASSWORD'))
+try:
+    token_type, refresh_token, access_token = sf.get_access_token(
+        session, cv, cc,
+        os.getenv('SYNERGY_USERNAME'), os.getenv('SYNERGY_PASSWORD'))
+except Exception:
+    # Credentials may already have been sent; an exception is still an attempt.
+    synergy_auth._record_login()
+    synergy_auth.record_login_failure()
+    raise
 
 # Count the attempt whether or not it succeeded. A failed login is exactly the
 # kind that locks an account, so excluding failures would leave the limiter
@@ -44,12 +50,14 @@ token_type, refresh_token, access_token = sf.get_access_token(
 synergy_auth._record_login()
 
 if not access_token:
+    synergy_auth.record_login_failure()
     sys.exit('Auth failed. Do NOT rerun this immediately -- a lockout and a '
              'wrong password return the same message, and retrying extends a '
              'lockout. Check whether another project shares this token file.')
 
 # The refresh token is the whole point of saving more than the access token:
 # with it, later renewals cost a token-endpoint call instead of a login.
+synergy_auth.clear_login_failure()
 tok = synergy_auth.save({'token_type': token_type,
                          'access_token': access_token,
                          'refresh_token': refresh_token})
