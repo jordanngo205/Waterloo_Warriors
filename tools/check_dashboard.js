@@ -64,6 +64,8 @@ try{
  F(document.getElementById('pc-content').innerText.length>200,'p vs p empty');
  // 8. shot quality panel hidden
  F(getComputedStyle(document.getElementById('ov-shot-quality').parentElement.parentElement).display==='none','shot quality panel visible with no data');
+ // 8b. 'Elite' may only label a top-10% rank, never the above-average scatter quadrant
+ F(document.getElementById('ov-scatter').innerHTML.indexOf('>ELITE<')<0,'scatter quadrant still labelled ELITE');
  // 9. leftover FIBA wording
  var all=document.body.innerText; ['FIBA','Senior','Tier 1','Tier 2','T1–2','of 81','/81','Canada Basketball'].forEach(function(w){ if(all.indexOf(w)>=0) R.fails.push('leftover text: '+w); });
 }catch(e){R.fails.push('EXCEPTION '+e+' '+e.stack);}

@@ -484,6 +484,13 @@ rep("""        <option value="0">All</option><option value="3">3+</option>
     """        <option value="0" selected>All</option><option value="3">3+</option>
         <option value="5">5+</option><option value="10">10+</option>""")
 
+# Scatter quadrants are just "above/below the average" on each axis. Calling the
+# top-right "ELITE" put every above-average team (Western, York, Windsor...) in it.
+rep(""">ELITE</text>';""", """>ABOVE AVG BOTH ENDS</text>';""")
+rep(""">DEFENSIVE</text>';""", """>DEFENSE ABOVE AVG</text>';""")
+rep(""">OFFENSIVE</text>';""", """>OFFENSE ABOVE AVG</text>';""")
+rep(""">STRUGGLING</text>';""", """>BELOW AVG BOTH ENDS</text>';""")
+
 # home team: defaults + highlight
 rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")
 rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'",

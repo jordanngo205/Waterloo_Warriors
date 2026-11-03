@@ -1811,10 +1811,10 @@ function renderScatterPlot(){
   svg+='<rect x="'+pL+'" y="'+ay+'" width="'+(ax-pL)+'" height="'+(pT+iH-ay)+'" fill="rgba(220,38,38,.07)"/>';  // struggling
   svg+='<rect x="'+ax+'" y="'+ay+'" width="'+(pL+iW-ax)+'" height="'+(pT+iH-ay)+'" fill="rgba(217,119,6,.06)"/>';  // good O, poor D
   // quadrant labels
-  svg+='<text x="'+(ax+6)+'" y="'+(pT+14)+'" fill="rgba(22,163,74,.8)" font-size="10" font-weight="700">ELITE</text>';
-  svg+='<text x="'+(pL+4)+'" y="'+(pT+14)+'" fill="rgba(26,86,219,.7)" font-size="10" font-weight="700">DEFENSIVE</text>';
-  svg+='<text x="'+(ax+6)+'" y="'+(pT+iH-6)+'" fill="rgba(217,119,6,.8)" font-size="10" font-weight="700">OFFENSIVE</text>';
-  svg+='<text x="'+(pL+4)+'" y="'+(pT+iH-6)+'" fill="rgba(220,38,38,.8)" font-size="10" font-weight="700">STRUGGLING</text>';
+  svg+='<text x="'+(ax+6)+'" y="'+(pT+14)+'" fill="rgba(22,163,74,.8)" font-size="10" font-weight="700">ABOVE AVG BOTH ENDS</text>';
+  svg+='<text x="'+(pL+4)+'" y="'+(pT+14)+'" fill="rgba(26,86,219,.7)" font-size="10" font-weight="700">DEFENSE ABOVE AVG</text>';
+  svg+='<text x="'+(ax+6)+'" y="'+(pT+iH-6)+'" fill="rgba(217,119,6,.8)" font-size="10" font-weight="700">OFFENSE ABOVE AVG</text>';
+  svg+='<text x="'+(pL+4)+'" y="'+(pT+iH-6)+'" fill="rgba(220,38,38,.8)" font-size="10" font-weight="700">BELOW AVG BOTH ENDS</text>';
   // grid
   for(var gi=0;gi<=4;gi++){
     var gv=minO+(maxO-minO)*gi/4, gx=xS(gv);
