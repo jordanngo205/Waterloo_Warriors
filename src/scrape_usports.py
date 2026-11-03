@@ -232,6 +232,7 @@ def main():
 
     teams_out = sorted(T.values(), key=lambda t: t['team']['name'])
     players_out = sorted(P.values(), key=lambda p: (p['team']['name'], p['player']['name'] or ''))
+    (out_dir / 'games.json').write_text(json.dumps(games))   # for tools/audit.py
     (out_dir / 'teams_all.json').write_text(json.dumps(teams_out, indent=1))
     (out_dir / 'players_all.json').write_text(json.dumps(players_out, indent=1))
     played = sum(1 for g in games if str(g.get('status')) == '2')
