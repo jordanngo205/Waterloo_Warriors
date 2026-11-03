@@ -114,6 +114,12 @@ SEASON_LABEL = META.get('season', SEASON)
 UPDATED = (META.get('scraped_at') or '')[:10]
 import base64
 _logo = ROOT / 'assets' / 'warriors_logo.svg'
+import subprocess, datetime
+try:
+    _rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip()
+except OSError:
+    _rev = ''
+BUILD = datetime.datetime.now().strftime('%b %-d %-I:%M%p').replace('AM', 'am').replace('PM', 'pm') + (f' · {_rev}' if _rev else '')
 LOGO_SRC = ('data:image/svg+xml;base64,' + base64.b64encode(_logo.read_bytes()).decode()) if _logo.exists() else ''
 
 '''
@@ -274,9 +280,9 @@ rep(".matchup-bar-row{", ".home-row td{background:rgba(255,209,0,.16)}\n.matchup
 # logo + titles
 rep('<div class="logo">\n', '<div class="logo">\n    <img src="{LOGO_SRC}" alt="Waterloo Warriors">\n')
 rep('<span class="logo-main">U SPORTS</span>', '<span class="logo-main">Waterloo Warriors</span>')
-rep("Women's Basketball Analytics{UPDATED}", "Women's Basketball &middot; U SPORTS Analytics{UPDATED}")
+rep("Women's Basketball Analytics{UPDATED}", "Women's Basketball &middot; U SPORTS Analytics{UPDATED}<span style=\"opacity:.55\"> &middot; build {BUILD}</span>")
 rep("'<title>U SPORTS Women\\'s Basketball</title>\\n'", "'<title>Waterloo Warriors WBB Analytics</title>\\n'")
-rep(".replace('{SEASON}', SEASON_LABEL)", ".replace('{LOGO_SRC}', LOGO_SRC).replace('{SEASON}', SEASON_LABEL)")
+rep(".replace('{SEASON}', SEASON_LABEL)", ".replace('{LOGO_SRC}', LOGO_SRC).replace('{BUILD}', BUILD).replace('{SEASON}', SEASON_LABEL)")
 
 # radar fill was colour+'22' (hex alpha), which breaks for anything but #rrggbb;
 # use fill-opacity instead. Radar in gold; two-sided comparisons are gold vs black.

@@ -97,6 +97,12 @@ SEASON_LABEL = META.get('season', SEASON)
 UPDATED = (META.get('scraped_at') or '')[:10]
 import base64
 _logo = ROOT / 'assets' / 'warriors_logo.svg'
+import subprocess, datetime
+try:
+    _rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True).stdout.strip()
+except OSError:
+    _rev = ''
+BUILD = datetime.datetime.now().strftime('%b %-d %-I:%M%p').replace('AM', 'am').replace('PM', 'pm') + (f' · {_rev}' if _rev else '')
 LOGO_SRC = ('data:image/svg+xml;base64,' + base64.b64encode(_logo.read_bytes()).decode()) if _logo.exists() else ''
 
 teams_json=json.dumps(TEAMS,separators=(',',':'))
@@ -330,7 +336,7 @@ HTML_BODY = """
     <img src="{LOGO_SRC}" alt="Waterloo Warriors">
     <div class="logo-text">
       <span class="logo-main">Waterloo Warriors</span>
-      <span class="logo-sub">Women's Basketball &middot; U SPORTS Analytics{UPDATED}</span>
+      <span class="logo-sub">Women's Basketball &middot; U SPORTS Analytics{UPDATED}<span style="opacity:.55"> &middot; build {BUILD}</span></span>
     </div>
     <span class="logo-badge">{SEASON}</span>
   </div>
@@ -2201,7 +2207,7 @@ HTML = ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n'
     '<title>Waterloo Warriors WBB Analytics</title>\n'
     '<style>'+CSS+'</style>\n</head>\n<body>\n'+HTML_BODY+
     '<script>\n'+DATA_BLOCK+JS+'</script>\n</body>\n</html>\n'
-).replace('{LOGO_SRC}', LOGO_SRC).replace('{SEASON}', SEASON_LABEL).replace('{UPDATED}', (' &middot; updated '+UPDATED) if UPDATED else '')
+).replace('{LOGO_SRC}', LOGO_SRC).replace('{BUILD}', BUILD).replace('{SEASON}', SEASON_LABEL).replace('{UPDATED}', (' &middot; updated '+UPDATED) if UPDATED else '')
 
 out = OUT
 out.parent.mkdir(exist_ok=True)
