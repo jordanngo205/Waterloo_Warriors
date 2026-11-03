@@ -866,8 +866,7 @@ function renderOverview(){
     pulse(fP(leagueEFG),'League EFG%','offensive efficiency')+
     pulse(f3(leagueDefPPP),'Avg Def PPP','points allowed per poss')+
     pulse(fP(league3Rate),'3PA Rate','% of FGA are 3-pointers')+
-    pulse(teams3Heavy+'/'+N,'3PT-Heavy Teams','&#8805;35% 3PA rate')+
-    (HOME?pulse((net(HOME)>=0?'+':'')+f3(net(HOME)),'Waterloo Net Rating','#'+((TR[HOME.id]||{}).net||'—')+' of '+TEAMS.length+' &middot; off PPP − def PPP'):pulse(f3(avgNet),'Avg Net Rating','off PPP minus def PPP'));
+    pulse(teams3Heavy+'/'+N,'3PT-Heavy Teams','&#8805;35% 3PA rate');
 
   // Extremes
   var sorted=validT.slice().sort(function(a,b){return ppp(b.off)-ppp(a.off);});
