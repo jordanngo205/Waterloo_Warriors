@@ -264,6 +264,11 @@ rep("var radar=radarSvg(radarVals,radarLabels2,countryColor(t.name));",
 rep("var colA=countryColor(ta.name), colB=countryColor(tb.name);", "var colA='#a88600', colB='#231F20';")
 rep("var colA_team=countryColor(pA.team), colB_team=countryColor(pB.team);", "var colA_team='#a88600', colB_team='#231F20';")
 
+# League-average net rating is ~0 by construction (every point scored is one
+# allowed), so the card said nothing. Show Waterloo's net rating and rank instead.
+rep("pulse(f1(avgNet),'Avg Net Rating','off PPP minus def PPP');",
+    "(HOME?pulse((net(HOME)>=0?'+':'')+f3(net(HOME)),'Waterloo Net Rating','#'+((TR[HOME.id]||{}).net||'—')+' of '+TEAMS.length+' &middot; off PPP − def PPP'):pulse(f3(avgNet),'Avg Net Rating','off PPP minus def PPP'));")
+
 # home team: defaults + highlight
 rep("var TEAM_CONF={};", "var HOME=TEAMS.filter(function(t){return /waterloo/i.test(t.name);})[0];\nvar HOME_ID=HOME?HOME.id:'';\nvar TEAM_CONF={};")
 rep("    html+='<tr>'+\n      '<td class=\"rank-cell\">'+(i+1)+'</td>'+\n      '<td><span style=\"font-weight:700\">'",
